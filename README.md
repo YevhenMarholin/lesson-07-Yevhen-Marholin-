@@ -271,3 +271,104 @@ course-app-5f6dc5c977   10        10        10      11s
 
 Висновок: з `maxUnavailable: 5` і `maxSurge: 0` оновлення проходить швидше, але під час rollout частина Pods може бути недоступною. Це менш безпечно для production, бо доступність застосунку може тимчасово зменшитися.
 
+## Recreate strategy
+
+У `deployment.yaml` було встановлено стратегію:
+
+```yaml
+strategy:
+  type: Recreate
+```
+
+Після цього Deployment було оновлено:
+
+```bash
+kubectl apply -f deployment.yaml
+kubectl rollout restart deployment/course-app
+kubectl rollout status deployment/course-app
+kubectl get pods -w
+```
+
+Під час rollout Kubernetes спочатку завершив старі Pods, а потім створив нові. Це видно з того, що спочатку було:
+
+```bash
+Waiting for deployment "course-app" rollout to finish: 0 out of 10 new replicas have been updated...
+Waiting for deployment "course-app" rollout to finish: 0 of 10 updated replicas are available...
+```
+
+Після цього нові Pods поступово стали доступними:
+
+```bash
+Waiting for deployment "course-app" rollout to finish: 1 of 10 updated replicas are available...
+Waiting for deployment "course-app" rollout to finish: 5 of 10 updated replicas are available...
+Waiting for deployment "course-app" rollout to finish: 9 of 10 updated replicas are available...
+deployment "course-app" successfully rolled out
+```
+
+Після завершення rollout усі 10 Pods працюють:
+
+```bash
+course-app-5ff5484c67-5pbxv   1/1   Running
+course-app-5ff5484c67-bk2tz   1/1   Running
+course-app-5ff5484c67-bpdxv   1/1   Running
+course-app-5ff5484c67-jk8lm   1/1   Running
+course-app-5ff5484c67-jn9fl   1/1   Running
+course-app-5ff5484c67-jt7wg   1/1   Running
+course-app-5ff5484c67-k6rqs   1/1   Running
+course-app-5ff5484c67-kcq5p   1/1   Running
+course-app-5ff5484c67-twzkm   1/1   Running
+course-app-5ff5484c67-w5xpg   1/1   Running
+```
+
+Висновок: стратегія `Recreate` спочатку видаляє старі Pods, а потім створює нові. Через це під час оновлення застосунок може бути тимчасово недоступний.
+
+## Порівняння RollingUpdate і Recreate
+
+### RollingUpdate
+
+`RollingUpdate` оновлює Pods поступово. Частина старих Pods продовжує працювати, поки створюються нові Pods.
+
+Переваги:
+- застосунок залишається доступним під час оновлення
+- можна керувати швидкістю через `maxUnavailable` і `maxSurge`
+- підходить для production
+
+Недоліки:
+- певний час працюють дві версії одночасно
+- оновлення повільніше
+
+### maxUnavailable
+
+Скільки Pods може бути недоступно під час оновлення.
+
+Наприклад:
+- `1` → максимум 1 Pod може "впасти"
+
+### maxSurge
+
+Скільки додаткових Pods можна створити зверху.
+
+Наприклад:
+- `replicas: 10`, `maxSurge: 3` → максимум 13 Pods
+
+---
+
+### Recreate (Replace)
+
+`Recreate` видаляє всі старі Pods і тільки потім створює нові.
+
+Переваги:
+- проста логіка
+- немає змішування версій
+- підходить якщо версії несумісні
+
+Недоліки:
+- є downtime
+- не підходить для production
+
+---
+
+### Різниця
+
+- **RollingUpdate** → без downtime, поступове оновлення  
+- **Recreate** → повний стоп → потім запуск (є downtime)
