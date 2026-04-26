@@ -232,3 +232,42 @@ course-app-8c77d665f    0         0         0       3m19s
 
 Висновок: з `maxUnavailable: 0` і `maxSurge: 3` Kubernetes не вимикає старі Pods, поки не створить нові. Це безпечніше для доступності, але тимчасово використовує більше ресурсів.
 
+## RollingUpdate: maxUnavailable 5, maxSurge 0
+
+У `deployment.yaml` було встановлено:
+
+```yaml
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxUnavailable: 5
+    maxSurge: 0
+```
+
+Після цього Deployment було оновлено:
+
+```bash
+kubectl apply -f deployment.yaml
+kubectl rollout restart deployment/course-app
+kubectl rollout status deployment/course-app
+```
+
+Під час rollout Kubernetes спочатку зменшував кількість старих Pods, а потім створював нові:
+
+```bash
+Waiting for deployment "course-app" rollout to finish: 5 out of 10 new replicas have been updated...
+Waiting for deployment "course-app" rollout to finish: 9 out of 10 new replicas have been updated...
+Waiting for deployment "course-app" rollout to finish: 5 of 10 updated replicas are available...
+Waiting for deployment "course-app" rollout to finish: 9 of 10 updated replicas are available...
+deployment "course-app" successfully rolled out
+```
+
+Новий ReplicaSet:
+
+```bash
+NAME                    DESIRED   CURRENT   READY   AGE
+course-app-5f6dc5c977   10        10        10      11s
+```
+
+Висновок: з `maxUnavailable: 5` і `maxSurge: 0` оновлення проходить швидше, але під час rollout частина Pods може бути недоступною. Це менш безпечно для production, бо доступність застосунку може тимчасово зменшитися.
+

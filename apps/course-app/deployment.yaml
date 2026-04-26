@@ -5,10 +5,7 @@ metadata:
 spec:
   replicas: 10
   strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxUnavailable: 5
-      maxSurge: 0
+    type: Recreate
   selector:
     matchLabels:
       app: course-app
