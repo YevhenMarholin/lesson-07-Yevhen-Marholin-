@@ -191,3 +191,44 @@ course-app-d7d69d495    0         0         0       2m36s
 ```
 
 Висновок: з `maxUnavailable: 1` і `maxSurge: 1` оновлення проходить обережно. Kubernetes створює невелику кількість нових Pods і поступово завершує старі, зберігаючи доступність застосунку.
+
+## RollingUpdate: maxUnavailable 0, maxSurge 3
+
+У `deployment.yaml` було встановлено:
+
+```yaml
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxUnavailable: 0
+    maxSurge: 3
+```
+
+Після цього Deployment було оновлено:
+
+```bash
+kubectl apply -f deployment.yaml
+kubectl rollout restart deployment/course-app
+kubectl rollout status deployment/course-app
+```
+
+Під час rollout Kubernetes створював нові Pods, не зменшуючи кількість доступних старих Pods:
+
+```bash
+Waiting for deployment "course-app" rollout to finish: 3 out of 10 new replicas have been updated...
+Waiting for deployment "course-app" rollout to finish: 6 out of 10 new replicas have been updated...
+Waiting for deployment "course-app" rollout to finish: 9 out of 10 new replicas have been updated...
+Waiting for deployment "course-app" rollout to finish: 2 old replicas are pending termination...
+deployment "course-app" successfully rolled out
+```
+
+Новий ReplicaSet:
+
+```bash
+NAME                    DESIRED   CURRENT   READY   AGE
+course-app-75d85ff9bb   10        10        10      12s
+course-app-8c77d665f    0         0         0       3m19s
+```
+
+Висновок: з `maxUnavailable: 0` і `maxSurge: 3` Kubernetes не вимикає старі Pods, поки не створить нові. Це безпечніше для доступності, але тимчасово використовує більше ресурсів.
+
